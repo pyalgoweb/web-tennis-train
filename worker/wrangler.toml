@@ -1,0 +1,13 @@
+name = "tennis-train-backend"
+main = "main.py"
+compatibility_date = "2024-01-01"
+
+[vars]
+# 可以在这里添加环境变量
+
+# 如果需要访问数据库（如 D1），可以在这里配置
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "tennis_stats"
+# database_id = "your-id"
+
