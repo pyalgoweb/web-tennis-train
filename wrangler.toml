@@ -3,5 +3,4 @@ compatibility_date = "2025-12-29"
 
 [assets]
 directory = "./dist"
-binding = "ASSETS"
-
+# 删除了 binding = "ASSETS"，因为你是纯静态网页部署
