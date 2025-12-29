@@ -52,7 +52,7 @@ const ReactionSpeed = ({ onBack }) => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden select-none touch-none bg-slate-950">
+    <div className="flex-1 flex flex-col h-[100dvh] overflow-hidden select-none touch-none bg-slate-950">
       <header className="p-4 flex items-center justify-between border-b border-slate-800 bg-slate-900/50">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="p-2 -ml-2 text-slate-400">

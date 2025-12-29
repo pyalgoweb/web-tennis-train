@@ -179,7 +179,7 @@ const RhythmGame = ({ onBack }) => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-950 select-none">
+    <div className="flex-1 flex flex-col h-[100dvh] overflow-hidden bg-slate-950 select-none">
       <header className="p-4 flex items-center justify-between border-b border-slate-800 bg-emerald-900/20">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="p-2 -ml-2 text-slate-400">
@@ -265,6 +265,7 @@ const RhythmGame = ({ onBack }) => {
           hitEffect?.type === 'MISS' ? 'bg-red-500/10' : 'bg-slate-900'
         }`}
         onPointerDown={handleHit}
+        style={{ height: '100%' }} // 确保容器填满
       >
         {/* 背景局部脉冲效果 (对齐击球区) */}
         <AnimatePresence>
@@ -290,7 +291,7 @@ const RhythmGame = ({ onBack }) => {
         >
           {/* 中心基准线 */}
           <div 
-            className="absolute left-0 right-0 h-[2px] bg-white/20"
+            className="absolute left-0 right-0 h-[3px] bg-white/30"
             style={{ top: `${HIT_ZONE_Y}%` }}
           />
 
@@ -299,27 +300,27 @@ const RhythmGame = ({ onBack }) => {
             <div className="absolute inset-0">
               {/* GOOD 区域 (±10%) -> 总高度 20% */}
               <div 
-                className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[92%] border-2 border-blue-500/30 rounded-full bg-blue-500/5" 
+                className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[94%] border-[2px] border-blue-500/40 rounded-full bg-blue-500/5 shadow-[inset_0_0_20px_rgba(59,130,246,0.1)]" 
                 style={{ top: `${HIT_ZONE_Y}%`, height: `${HIT_THRESHOLD * 2}%` }}
               />
               {/* GREAT 区域 (±6%) -> 总高度 12% */}
               <div 
-                className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[82%] border-2 border-green-500/40 rounded-full bg-green-500/5" 
+                className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[84%] border-[2px] border-green-500/50 rounded-full bg-green-500/5 shadow-[inset_0_0_15px_rgba(34,197,94,0.1)]" 
                 style={{ top: `${HIT_ZONE_Y}%`, height: `${6 * 2}%` }}
               />
               {/* PERFECT 区域 (±2%) -> 总高度 4% */}
               <div 
-                className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[72%] border-2 border-yellow-400/50 rounded-full bg-yellow-400/10 shadow-[0_0_25px_rgba(250,204,21,0.2)]" 
+                className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[74%] border-[3px] border-yellow-400/60 rounded-full bg-yellow-400/10 shadow-[0_0_30px_rgba(250,204,21,0.2),inset_0_0_10px_rgba(250,204,21,0.2)]" 
                 style={{ top: `${HIT_ZONE_Y}%`, height: `${2 * 2}%` }}
               />
             </div>
           ) : (
             /* 普通模式：单一简洁的虚线圈 */
             <motion.div 
-              style={{ top: `${HIT_ZONE_Y}%` }}
-              animate={hitEffect ? { opacity: [0.3, 0.8, 0.3] } : {}}
+              style={{ top: `${HIT_ZONE_Y}%`, height: '12%' }}
+              animate={hitEffect ? { opacity: [0.4, 1, 0.4], scale: [1, 1.05, 1] } : {}}
               transition={{ duration: 0.2 }}
-              className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[85%] h-20 border-[3px] border-dashed border-white/20 rounded-full" 
+              className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[88%] border-[4px] border-dashed border-white/20 rounded-full" 
             />
           )}
           
@@ -347,14 +348,17 @@ const RhythmGame = ({ onBack }) => {
               key={ball.id}
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full z-20"
+              exit={{ scale: 1.2, opacity: 0 }}
+              transition={{ duration: 0.1 }}
+              className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 z-20"
               style={{ 
                 top: `${ball.y}%`,
                 background: `radial-gradient(circle at 35% 35%, #dfff00 0%, #c2e600 50%, #a2c100 100%)`,
+                borderRadius: '50%',
                 boxShadow: `
                   inset -6px -6px 12px rgba(0,0,0,0.3),
                   inset 6px 6px 12px rgba(255,255,255,0.4),
-                  0 0 25px rgba(204,255,0,0.3)
+                  0 5px 15px rgba(0,0,0,0.4)
                 `
               }}
             >
@@ -364,8 +368,8 @@ const RhythmGame = ({ onBack }) => {
                 <path 
                   d="M 5,50 C 5,10 50,10 50,50 C 50,90 95,90 95,50" 
                   fill="none" 
-                  stroke="rgba(0,0,0,0.25)" 
-                  strokeWidth="9" 
+                  stroke="rgba(0,0,0,0.2)" 
+                  strokeWidth="10" 
                   strokeLinecap="round"
                   transform="rotate(-15 50 50)"
                 />
@@ -374,9 +378,9 @@ const RhythmGame = ({ onBack }) => {
                   d="M 5,50 C 5,10 50,10 50,50 C 50,90 95,90 95,50" 
                   fill="none" 
                   stroke="#f5f5f5" 
-                  strokeWidth="6" 
+                  strokeWidth="7" 
                   strokeLinecap="round"
-                  className="opacity-90"
+                  className="opacity-80"
                   transform="rotate(-15 50 50)"
                 />
               </svg>
@@ -386,7 +390,7 @@ const RhythmGame = ({ onBack }) => {
 
               {/* 辅助模式下的球心标记 */}
               {showZones && (
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-red-600 rounded-full shadow-[0_0_8px_rgba(220,38,38,1)] z-30" />
+                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-red-600 rounded-full shadow-[0_0_10px_white] z-30" />
               )}
             </motion.div>
           ))}
@@ -398,8 +402,8 @@ const RhythmGame = ({ onBack }) => {
             <motion.div
               key={feedback.id}
               initial={{ opacity: 0, scale: 0.3, y: 0 }}
-              animate={{ opacity: 1, scale: 1.2, y: -140 }}
-              exit={{ opacity: 0, scale: 0.5 }}
+              animate={{ opacity: 1, scale: 1.2, y: -100 }}
+              exit={{ opacity: 0 }}
               transition={{ 
                 type: "spring", 
                 stiffness: 600, 
@@ -407,7 +411,7 @@ const RhythmGame = ({ onBack }) => {
                 mass: 0.5
               }}
               style={{ top: `${HIT_ZONE_Y}%` }}
-              className={`absolute left-0 right-0 text-center -translate-y-1/2 text-6xl font-black italic tracking-tighter ${feedback.colorClass} drop-shadow-[0_0_15px_rgba(0,0,0,0.6)] pointer-events-none z-50`}
+              className={`absolute left-0 right-0 text-center -translate-y-1/2 text-6xl font-black italic tracking-tighter ${feedback.colorClass} drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)] pointer-events-none z-50`}
             >
               {feedback.text}
             </motion.div>
@@ -416,31 +420,31 @@ const RhythmGame = ({ onBack }) => {
 
         {/* 准备界面/暂停提示 */}
         {(gameState === 'ready' || isPaused) && (
-          <div className={`absolute inset-0 flex flex-col items-center p-8 text-center z-50 transition-all ${
-            isPaused ? 'bg-black/10' : 'bg-black/70 backdrop-blur-sm justify-center'
+          <div className={`absolute inset-0 flex flex-col items-center z-50 transition-all ${
+            isPaused ? 'bg-black/5' : 'bg-black/80 backdrop-blur-sm justify-center p-8'
           }`}>
             <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
               {isPaused ? (
-                <div className="mt-10 bg-black/40 border border-white/10 px-6 py-3 rounded-full backdrop-blur-md">
-                  <h3 className="text-xl font-black text-tennis-ball italic flex items-center gap-2">
-                    <RefreshCw size={18} className="animate-spin" /> PAUSED
+                <div className="mt-16 bg-black/60 border border-white/20 px-8 py-4 rounded-full backdrop-blur-xl shadow-2xl">
+                  <h3 className="text-2xl font-black text-tennis-ball italic flex items-center gap-3">
+                    <RefreshCw size={24} className="animate-spin" /> 暂停中
                   </h3>
-                  <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest mt-1">
-                    点击屏幕任何位置继续
+                  <p className="text-xs font-bold text-white/60 uppercase tracking-[0.2em] mt-2 text-center">
+                    点击屏幕继续训练
                   </p>
                 </div>
               ) : (
                 <>
-                  <h3 className="text-4xl font-black text-white mb-2 italic">READY?</h3>
-                  <p className="text-slate-400 mb-10 max-w-[240px] mx-auto leading-relaxed">
-                    当网球经过下方的虚线圆圈时，点击屏幕任意位置击球！
+                  <h3 className="text-5xl font-black text-white mb-4 italic tracking-tighter">GO!</h3>
+                  <p className="text-slate-400 mb-12 max-w-[280px] mx-auto text-lg leading-tight">
+                    在网球进入彩色区域的瞬间点击屏幕
                   </p>
                   <motion.button
                     whileTap={{ scale: 0.9 }}
                     onPointerDown={(e) => { e.stopPropagation(); startGame(); }}
-                    className="px-16 py-5 bg-tennis-ball text-black rounded-2xl font-black text-2xl italic tracking-widest shadow-2xl shadow-tennis-ball/30"
+                    className="px-20 py-6 bg-tennis-ball text-black rounded-3xl font-black text-3xl italic tracking-widest shadow-[0_20px_50px_rgba(225,255,0,0.3)]"
                   >
-                    开始
+                    START
                   </motion.button>
                 </>
               )}
