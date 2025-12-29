@@ -18,16 +18,39 @@ const RhythmGame = ({ onBack }) => {
   const [isPaused, setIsPaused] = useState(false); // 当前是否处于暂停状态
   const [capturedBallId, setCapturedBallId] = useState(null); // 记录暂停时的那个球
   const [isSettingsOpen, setIsSettingsOpen] = useState(false); // 设置菜单开关
+  
+  // 新增：动态布局状态，用于自动拟合不同手机屏幕高度
+  const [layout, setLayout] = useState({ height: 0, hitZonePx: 0, thresholdPx: 0 });
   const containerRef = useRef(null);
   const lastSpawnRef = useRef(0);
   const scoreRef = useRef(0);
 
+  // 核心拟合逻辑：实时计算当前容器的物理像素尺寸
+  const updateLayout = useCallback(() => {
+    if (containerRef.current) {
+      const h = containerRef.current.clientHeight;
+      setLayout({
+        height: h,
+        hitZonePx: h * (HIT_ZONE_Y / 100),
+        thresholdPx: h * (HIT_THRESHOLD / 100)
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    updateLayout();
+    // 监听窗口大小变化（如手机横竖屏切换、地址栏隐藏/出现）
+    window.addEventListener('resize', updateLayout);
+    return () => window.removeEventListener('resize', updateLayout);
+  }, [updateLayout]);
+
   const startGame = () => {
+    updateLayout(); // 开始瞬间重新定义视口
     setBalls([]);
     setScore(0);
     scoreRef.current = 0;
     setGameState('playing');
-    setIsSettingsOpen(false); // 开始游戏时关闭设置
+    setIsSettingsOpen(false); 
     lastSpawnRef.current = performance.now();
   };
 
@@ -104,7 +127,7 @@ const RhythmGame = ({ onBack }) => {
       return;
     }
 
-    // 记录本次操作时间，作为下一次出球的基准（无论暂停、击中还是 Miss）
+    // 记录本次操作时间
     const hitTime = performance.now();
     lastSpawnRef.current = hitTime;
 
@@ -120,33 +143,36 @@ const RhythmGame = ({ onBack }) => {
 
     if (gameState !== 'playing') return;
 
-    // 1. 立即获取当前的球列表进行判定（不依赖下一次渲染）
-    // 注意：由于 balls 是状态，这里拿到的是当前闭包中的 balls
-    // 为了极致性能，我们可以通过计算来判定
+    // --- 物理拟合判定核心逻辑 ---
+    // 1. 获取点击瞬间容器的真实物理像素高度
+    const currentHeight = containerRef.current.clientHeight;
+    // 判定线的物理像素位置
+    const hitZonePx = currentHeight * (HIT_ZONE_Y / 100);
     
-    let closestIdx = -1;
-    let minDistance = Infinity;
-    let closestBall = null;
+    // 获取当前的球
+    let closestBall = balls[0];
+    if (!closestBall) {
+      triggerFeedback('MISS');
+      return;
+    }
 
-    balls.forEach((ball, idx) => {
-      const dist = Math.abs(ball.y - HIT_ZONE_Y);
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestIdx = idx;
-        closestBall = ball;
-      }
-    });
+    // 2. 将球的百分比 Y 坐标还原为当前的物理像素坐标
+    const ballPx = (closestBall.y / 100) * currentHeight;
+    const distPx = Math.abs(ballPx - hitZonePx);
+    
+    // 3. 判定阈值：物理感官上的 10% 高度对应的像素
+    const thresholdPx = currentHeight * (HIT_THRESHOLD / 100);
 
-    // 2. 判定逻辑 (对齐视觉：PERFECT 为 2%, GREAT 为 2-6%, GOOD 为 6-10%)
-    if (closestIdx !== -1 && minDistance < HIT_THRESHOLD) {
-      const dist = minDistance;
+    // 4. 判定级别划分 (视觉与逻辑严格统一：PERFECT <= 3%, GREAT <= 6%, GOOD <= 10%)
+    if (distPx <= thresholdPx) {
+      const relativeDist = (distPx / currentHeight) * 100;
       let points = 0;
       let type = '';
 
-      if (dist < 2) {
+      if (relativeDist <= 3) {
         points = 100;
         type = 'PERFECT';
-      } else if (dist < 6) {
+      } else if (relativeDist <= 6) {
         points = 50;
         type = 'GREAT';
       } else {
@@ -154,7 +180,7 @@ const RhythmGame = ({ onBack }) => {
         type = 'GOOD';
       }
 
-      // 3. 立即更新分数和反馈（同步触发渲染）
+      // 5. 更新分数和反馈
       scoreRef.current += points;
       setScore(scoreRef.current);
       triggerFeedback(type);
@@ -164,14 +190,14 @@ const RhythmGame = ({ onBack }) => {
         setIsPaused(true);
         setCapturedBallId(closestBall.id);
       } else {
-        setBalls(prev => prev.filter(b => b.id !== closestBall.id));
+        setBalls([]); // 击中后移除
       }
     } else {
       // 没击中
       triggerFeedback('MISS');
       
       // MISS 时也需要暂停复盘
-      if (pauseOnHit && closestBall) {
+      if (pauseOnHit) {
         setIsPaused(true);
         setCapturedBallId(closestBall.id);
       }
@@ -289,9 +315,9 @@ const RhythmGame = ({ onBack }) => {
         <div 
           className="absolute inset-x-0 inset-y-0 pointer-events-none z-10"
         >
-          {/* 中心基准线 */}
+          {/* 中心基准线 - 确保严格居中 */}
           <div 
-            className="absolute left-0 right-0 h-[3px] bg-white/30"
+            className="absolute left-0 right-0 h-[3px] bg-white/40 -translate-y-1/2"
             style={{ top: `${HIT_ZONE_Y}%` }}
           />
 
@@ -308,16 +334,16 @@ const RhythmGame = ({ onBack }) => {
                 className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[84%] border-[2px] border-green-500/50 rounded-full bg-green-500/5 shadow-[inset_0_0_15px_rgba(34,197,94,0.1)]" 
                 style={{ top: `${HIT_ZONE_Y}%`, height: `${6 * 2}%` }}
               />
-              {/* PERFECT 区域 (±2%) -> 总高度 4% */}
+              {/* PERFECT 区域 (±3%) -> 总高度 6% */}
               <div 
                 className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[74%] border-[3px] border-yellow-400/60 rounded-full bg-yellow-400/10 shadow-[0_0_30px_rgba(250,204,21,0.2),inset_0_0_10px_rgba(250,204,21,0.2)]" 
-                style={{ top: `${HIT_ZONE_Y}%`, height: `${2 * 2}%` }}
+                style={{ top: `${HIT_ZONE_Y}%`, height: `${3 * 2}%` }}
               />
             </div>
           ) : (
             /* 普通模式：单一简洁的虚线圈 */
             <motion.div 
-              style={{ top: `${HIT_ZONE_Y}%`, height: '12%' }}
+              style={{ top: `${HIT_ZONE_Y}%`, height: '14%' }}
               animate={hitEffect ? { opacity: [0.4, 1, 0.4], scale: [1, 1.05, 1] } : {}}
               transition={{ duration: 0.2 }}
               className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[88%] border-[4px] border-dashed border-white/20 rounded-full" 
