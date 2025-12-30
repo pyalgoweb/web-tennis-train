@@ -190,7 +190,18 @@ const RhythmGame = ({ onBack }) => {
       <main ref={containerRef} className={`flex-1 relative overflow-hidden touch-none transition-colors duration-75 ${hitEffect?.type === 'PERFECT' ? 'bg-yellow-500/10' : hitEffect?.type === 'MISS' ? 'bg-red-500/10' : 'bg-slate-900'}`} onPointerDown={handleHit}>
         <AnimatePresence>
           {hitEffect && (
-            <motion.div initial={{ opacity: 0.6, scale: 0.5 }} animate={{ opacity: 0, scale: 2 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }} style={{ top: `${HIT_ZONE_Y}%` }} className={`absolute left-0 right-0 h-32 -translate-y-1/2 blur-3xl pointer-events-none z-0 ${hitEffect.type === 'PERFECT' ? 'bg-yellow-400/30' : hitEffect.type === 'GREAT' ? 'bg-green-400/20' : hitEffect.type === 'GOOD' ? 'bg-blue-400/15' : 'bg-red-500/25'}`} />
+            <motion.div 
+              initial={{ opacity: 0.6, scale: 0.5, y: "-50%" }} 
+              animate={{ opacity: 0, scale: 2, y: "-50%" }} 
+              exit={{ opacity: 0 }} 
+              transition={{ duration: 0.3 }} 
+              style={{ top: `${HIT_ZONE_Y}%`, left: 0, right: 0 }} 
+              className={`absolute h-32 blur-3xl pointer-events-none z-0 ${
+                hitEffect.type === 'PERFECT' ? 'bg-yellow-400/30' : 
+                hitEffect.type === 'GREAT' ? 'bg-green-400/20' : 
+                hitEffect.type === 'GOOD' ? 'bg-blue-400/15' : 'bg-red-500/25'
+              }`} 
+            />
           )}
         </AnimatePresence>
 
@@ -207,7 +218,17 @@ const RhythmGame = ({ onBack }) => {
           )}
           <AnimatePresence>
             {hitEffect && hitEffect.type !== 'MISS' && (
-              <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 0.5, scale: 1.2 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} style={{ top: `${HIT_ZONE_Y}%`, height: '10%' }} className={`absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] rounded-full blur-3xl ${hitEffect.type === 'PERFECT' ? 'bg-yellow-400' : hitEffect.type === 'GREAT' ? 'bg-green-400' : 'bg-blue-400'}`} />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.8, x: "-50%", y: "-50%" }} 
+                animate={{ opacity: 0.5, scale: 1.2, x: "-50%", y: "-50%" }} 
+                exit={{ opacity: 0 }} 
+                transition={{ duration: 0.2 }} 
+                style={{ top: `${HIT_ZONE_Y}%`, left: "50%", height: "10%", width: "60%" }} 
+                className={`absolute rounded-full blur-3xl ${
+                  hitEffect.type === 'PERFECT' ? 'bg-yellow-400' : 
+                  hitEffect.type === 'GREAT' ? 'bg-green-400' : 'bg-blue-400'
+                }`} 
+              />
             )}
           </AnimatePresence>
         </div>
