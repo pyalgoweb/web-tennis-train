@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Zap, RefreshCw, Trophy, Settings, Eye, Split } from 'lucide-react';
+import { ArrowLeft, Zap, RefreshCw, Trophy, Settings, Eye, Split, MousePointer2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const ReactionSpeed = ({ onBack }) => {
@@ -10,6 +10,8 @@ const ReactionSpeed = ({ onBack }) => {
     return localStorage.getItem('tennis_best_reaction') || null;
   });
   const [isSplitMode, setIsSplitMode] = useState(false);
+  const [showClickPos, setShowClickPos] = useState(false);
+  const [clickLocation, setClickLocation] = useState(null);
   const [targetSide, setTargetSide] = useState(null); // 'left' or 'right'
   const [clickedSide, setClickedSide] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -21,6 +23,7 @@ const ReactionSpeed = ({ onBack }) => {
     setGameState('waiting');
     setReactionTime(null);
     setClickedSide(null);
+    setClickLocation(null);
     
     // 如果是分屏模式，随机选择一边
     if (isSplitMode) {
@@ -41,6 +44,17 @@ const ReactionSpeed = ({ onBack }) => {
     if (isSettingsOpen) {
       setIsSettingsOpen(false);
       return;
+    }
+
+    // 记录点击位置
+    if (mainRef.current) {
+      const rect = mainRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      setClickLocation({ 
+        x: (x / rect.width) * 100, 
+        y: (y / rect.height) * 100 
+      });
     }
 
     if (gameState === 'waiting') {
@@ -123,6 +137,18 @@ const ReactionSpeed = ({ onBack }) => {
                     <div className={`absolute top-1 w-2 h-2 bg-white rounded-full transition-all ${isSplitMode ? 'right-1' : 'left-1'}`} />
                   </div>
                 </button>
+                <button 
+                  onPointerDown={(e) => { e.stopPropagation(); setShowClickPos(!showClickPos); }} 
+                  className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-700/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <MousePointer2 size={16} />
+                    <span className="text-sm">显示点击位置</span>
+                  </div>
+                  <div className={`w-8 h-4 rounded-full relative ${showClickPos ? 'bg-tennis-ball' : 'bg-slate-600'}`}>
+                    <div className={`absolute top-1 w-2 h-2 bg-white rounded-full transition-all ${showClickPos ? 'right-1' : 'left-1'}`} />
+                  </div>
+                </button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -159,6 +185,27 @@ const ReactionSpeed = ({ onBack }) => {
             }`}
           />
         </div>
+
+        {/* 点击位置标记 */}
+        {gameState === 'result' && showClickPos && clickLocation && (
+          <div
+            className="absolute z-30 pointer-events-none"
+            style={{ 
+              left: `${clickLocation.x}%`, 
+              top: `${clickLocation.y}%`,
+              transform: 'translate(-50%, -50%)'
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="w-10 h-10 border-2 border-white rounded-full flex items-center justify-center"
+            >
+              <div className="w-2 h-2 bg-white rounded-full" />
+              <div className="absolute inset-0 animate-ping rounded-full border border-white/50" />
+            </motion.div>
+          </div>
+        )}
 
         {/* 内容层 */}
         <div className="relative z-20 w-full h-full flex items-center justify-center">
