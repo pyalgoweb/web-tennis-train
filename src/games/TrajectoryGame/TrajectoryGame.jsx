@@ -100,7 +100,7 @@ const TrajectoryGame = ({ onBack }) => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-[100dvh] overflow-hidden bg-slate-950 select-none">
+    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-950 select-none">
       <header className="p-4 flex items-center justify-between border-b border-slate-800 bg-blue-900/20">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="p-2 -ml-2 text-slate-400">
