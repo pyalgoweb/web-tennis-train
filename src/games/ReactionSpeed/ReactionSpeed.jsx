@@ -46,8 +46,9 @@ const ReactionSpeed = ({ onBack }) => {
     if (gameState === 'waiting') {
       // 太早了！
       clearTimeout(timerRef.current);
-      setGameState('ready');
-      alert('太早了！请等到颜色变化后再点击。');
+      setReactionTime(0);
+      setGameState('result');
+      if (window.navigator.vibrate) window.navigator.vibrate([100, 50, 100]);
     } else if (gameState === 'active') {
       const endTime = performance.now();
       const time = Math.round(endTime - startTime);
@@ -224,7 +225,11 @@ const ReactionSpeed = ({ onBack }) => {
                 className="text-center p-8 bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-[40px] shadow-2xl mx-6 max-w-sm w-full"
               >
                 <div className="flex justify-center mb-4">
-                  {isSplitMode && (
+                  {reactionTime === 0 ? (
+                    <div className="px-4 py-1 rounded-full text-xs font-black italic uppercase tracking-widest bg-red-500/20 text-red-400">
+                      抢跑！太快了
+                    </div>
+                  ) : isSplitMode && (
                     <div className={`px-4 py-1 rounded-full text-xs font-black italic uppercase tracking-widest ${
                       clickedSide === targetSide ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
                     }`}>
@@ -234,14 +239,14 @@ const ReactionSpeed = ({ onBack }) => {
                 </div>
 
                 <h3 className="text-slate-500 font-bold uppercase tracking-widest text-xs mb-2">你的反应时间</h3>
-                <div className="text-7xl font-mono font-black text-white mb-4 italic tracking-tighter">
-                  {reactionTime}<span className="text-2xl ml-1">ms</span>
+                <div className={`text-7xl font-mono font-black mb-4 italic tracking-tighter ${reactionTime === 0 ? 'text-red-500' : 'text-white'}`}>
+                  {reactionTime === 0 ? 'TOO EARLY' : <>{reactionTime}<span className="text-2xl ml-1">ms</span></>}
                 </div>
                 
                 <div className={`text-xl font-bold mb-10 ${
-                  isSplitMode && clickedSide !== targetSide ? 'text-red-500' : getRating(reactionTime).color
+                  reactionTime === 0 ? 'text-red-400' : (isSplitMode && clickedSide !== targetSide ? 'text-red-500' : getRating(reactionTime).color)
                 }`}>
-                  {isSplitMode && clickedSide !== targetSide ? '需要点对正确区域！' : getRating(reactionTime).text}
+                  {reactionTime === 0 ? '请在变色后点击' : (isSplitMode && clickedSide !== targetSide ? '需要点对正确区域！' : getRating(reactionTime).text)}
                 </div>
 
                 <button

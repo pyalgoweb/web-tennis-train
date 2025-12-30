@@ -14,7 +14,7 @@ const RhythmGame = ({ onBack }) => {
   const [feedback, setFeedback] = useState(null);
   const [gameState, setGameState] = useState('ready'); 
   const [hitEffect, setHitEffect] = useState(null); 
-  const [showZones, setShowZones] = useState(false);
+  const [hideZones, setHideZones] = useState(false);
   const [pauseOnHit, setPauseOnHit] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [capturedBallId, setCapturedBallId] = useState(null);
@@ -172,9 +172,9 @@ const RhythmGame = ({ onBack }) => {
           <AnimatePresence>
             {isSettingsOpen && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute right-0 top-full mt-2 w-56 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl z-[100] p-2">
-                <button onPointerDown={(e) => { e.stopPropagation(); setShowZones(!showZones); }} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-700/50">
-                  <div className="flex items-center gap-3"><Eye size={16} /><span className="text-sm">判定辅助区</span></div>
-                  <div className={`w-8 h-4 rounded-full relative ${showZones ? 'bg-tennis-ball' : 'bg-slate-600'}`}><div className={`absolute top-1 w-2 h-2 bg-white rounded-full transition-all ${showZones ? 'right-1' : 'left-1'}`} /></div>
+                <button onPointerDown={(e) => { e.stopPropagation(); setHideZones(!hideZones); }} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-700/50">
+                  <div className="flex items-center gap-3"><EyeOff size={16} /><span className="text-sm">专家模式 (隐藏范围)</span></div>
+                  <div className={`w-8 h-4 rounded-full relative ${hideZones ? 'bg-tennis-ball' : 'bg-slate-600'}`}><div className={`absolute top-1 w-2 h-2 bg-white rounded-full transition-all ${hideZones ? 'right-1' : 'left-1'}`} /></div>
                 </button>
                 <button onPointerDown={(e) => { e.stopPropagation(); setPauseOnHit(!pauseOnHit); }} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-700/50">
                   <div className="flex items-center gap-3"><RefreshCw size={16} /><span className="text-sm">击球后暂停</span></div>
@@ -207,7 +207,7 @@ const RhythmGame = ({ onBack }) => {
 
         <div className="absolute inset-0 pointer-events-none z-10">
           <div className="absolute left-0 right-0 h-[2px] bg-white/40 -translate-y-1/2" style={{ top: `${HIT_ZONE_Y}%` }} />
-          {showZones ? (
+          {!hideZones ? (
             <div className="absolute inset-0">
               <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[94%] border-[2px] border-blue-500/40 rounded-full bg-blue-500/5" style={{ top: `${HIT_ZONE_Y}%`, height: '20%' }} />
               <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[84%] border-[2px] border-green-500/50 rounded-full bg-green-500/5" style={{ top: `${HIT_ZONE_Y}%`, height: '12%' }} />
@@ -237,7 +237,7 @@ const RhythmGame = ({ onBack }) => {
           <div key={ball.id} className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 z-20" style={{ top: `${ball.y}%`, background: `radial-gradient(circle at 35% 35%, #dfff00 0%, #c2e600 50%, #a2c100 100%)`, borderRadius: '50%', boxShadow: 'inset -6px -6px 12px rgba(0,0,0,0.3), inset 6px 6px 12px rgba(255,255,255,0.4), 0 5px 15px rgba(0,0,0,0.4)', willChange: 'top' }}>
             <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full"><path d="M 5,50 C 5,10 50,10 50,50 C 50,90 95,90 95,50" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="10" strokeLinecap="round" transform="rotate(-15 50 50)" /><path d="M 5,50 C 5,10 50,10 50,50 C 50,90 95,90 95,50" fill="none" stroke="#f5f5f5" strokeWidth="7" strokeLinecap="round" className="opacity-80" transform="rotate(-15 50 50)" /></svg>
             <div className="absolute inset-0 rounded-full bg-[url('https://www.transparenttextures.com/patterns/felt.png')] opacity-20" />
-            {showZones && <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-red-600 rounded-full shadow-[0_0_10px_white] z-30" />}
+            {!hideZones && <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-red-600 rounded-full shadow-[0_0_10px_white] z-30" />}
           </div>
         ))}
 
@@ -255,7 +255,9 @@ const RhythmGame = ({ onBack }) => {
             ) : (
               <div className="text-center">
                 <h3 className="text-5xl font-black text-white mb-4 italic">GO!</h3>
-                <p className="text-slate-400 mb-12 max-w-[280px] mx-auto text-lg leading-tight">在网球进入彩色区域的瞬间点击屏幕</p>
+                <p className="text-slate-400 mb-12 max-w-[280px] mx-auto text-lg leading-tight">
+                  在网球进入{!hideZones ? '彩色' : '判定'}区域的瞬间点击屏幕
+                </p>
                 <motion.button whileTap={{ scale: 0.9 }} onPointerDown={(e) => { e.stopPropagation(); startGame(); }} className="px-20 py-6 bg-tennis-ball text-black rounded-3xl font-black text-3xl italic tracking-widest shadow-[0_20px_50px_rgba(225,255,0,0.3)]">START</motion.button>
               </div>
             )}
