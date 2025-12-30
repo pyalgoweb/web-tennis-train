@@ -62,6 +62,15 @@ const Home = ({ onSelectGame }) => {
         
         <div className="space-y-4">
           <GameCard
+            title="神经反应"
+            description="看到颜色变化瞬间点击，测试你的神经反应速度（毫秒）。"
+            icon={Zap}
+            color="bg-amber-600"
+            badge="基础"
+            onClick={() => onSelectGame('reaction')}
+          />
+
+          <GameCard
             title="节奏专家"
             description="模拟真实击球节奏，在甜点区瞬间完成反应训练。"
             icon={Music}
@@ -77,15 +86,6 @@ const Home = ({ onSelectGame }) => {
             color="bg-blue-600"
             badge="进阶"
             onClick={() => onSelectGame('trajectory')}
-          />
-
-          <GameCard
-            title="神经反应"
-            description="看到颜色变化瞬间点击，测试你的神经反应速度（毫秒）。"
-            icon={Zap}
-            color="bg-amber-600"
-            badge="基础"
-            onClick={() => onSelectGame('reaction')}
           />
         </div>
 
