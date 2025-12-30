@@ -214,7 +214,7 @@ const RhythmGame = ({ onBack }) => {
               <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[74%] border-[3px] border-yellow-400/60 rounded-full bg-yellow-400/10 shadow-[0_0_30px_rgba(250,204,21,0.2)]" style={{ top: `${HIT_ZONE_Y}%`, height: '5%' }} />
             </div>
           ) : (
-            <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[88%] border-[4px] border-dashed border-white/20 rounded-full" style={{ top: `${HIT_ZONE_Y}%`, height: '20%' }} />
+            <div className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 w-[76%] border-[2px] border-dashed border-white/20 rounded-full" style={{ top: `${HIT_ZONE_Y}%`, height: '8%' }} />
           )}
           <AnimatePresence>
             {hitEffect && hitEffect.type !== 'MISS' && (
