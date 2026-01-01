@@ -23,7 +23,7 @@ function App() {
   return (
     <div className="min-h-screen w-full flex flex-col bg-slate-950 text-white">
       {renderContent()}
-    </div>
+      </div>
   );
 }
 
