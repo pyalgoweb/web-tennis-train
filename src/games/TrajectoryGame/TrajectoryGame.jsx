@@ -81,12 +81,24 @@ const TrajectoryGame = ({ onBack }) => {
 
   const calculateRemainingPath = (startState) => {
     let current = { ...startState };
+    let prev = { ...startState };
     const path = [];
     const multiplier = isSlowMo ? 0.4 : 1;
+    
     while (current.y < TARGET_LINE_Y) {
+      prev = { ...current };
       current = updatePhysics(current, multiplier);
       path.push({ x: current.x, y: current.y });
     }
+
+    // 【核心修复】计算球与判定线的精确交点 (线性插值)
+    if (path.length > 0 && current.y !== prev.y) {
+      const ratio = (TARGET_LINE_Y - prev.y) / (current.y - prev.y);
+      const exactX = prev.x + (current.x - prev.x) * ratio;
+      // 修正路径的最后一个点，使其中心正好落在判定线上
+      path[path.length - 1] = { x: exactX, y: TARGET_LINE_Y };
+    }
+    
     return path;
   };
 
