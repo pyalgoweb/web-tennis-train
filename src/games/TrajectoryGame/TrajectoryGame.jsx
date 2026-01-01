@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft, RefreshCw, Target as TargetIcon, Zap, Settings, Eye } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Target as TargetIcon, Zap, Settings, Eye, FastForward } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameLoop } from '../../hooks/useGameLoop';
 
@@ -14,11 +14,11 @@ const PHYSICS = {
 };
 
 // 物理引擎核心逻辑：确保游戏循环和预测算法完全一致
-const updatePhysics = (state) => {
+const updatePhysics = (state, speedMultiplier = 1) => {
   const next = { ...state };
-  next.vy += PHYSICS.gravity;
-  next.x += next.vx;
-  next.y += next.vy;
+  next.vy += PHYSICS.gravity * speedMultiplier;
+  next.x += next.vx * speedMultiplier;
+  next.y += next.vy * speedMultiplier;
 
   // 侧边墙壁反弹
   if (next.x < 5) {
@@ -39,6 +39,7 @@ const TrajectoryGame = ({ onBack }) => {
   const [score, setScore] = useState(null);
   const [trajectoryPath, setTrajectoryPath] = useState([]); 
   const [showGhostBalls, setShowGhostBalls] = useState(true); // 默认开启“保留参考位置”
+  const [isSlowMo, setIsSlowMo] = useState(false); // 慢放模式
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const containerRef = useRef(null);
   
@@ -54,8 +55,9 @@ const TrajectoryGame = ({ onBack }) => {
   const calculateRemainingPath = (startState) => {
     let current = { ...startState };
     const path = [];
+    const multiplier = isSlowMo ? 0.4 : 1;
     while (current.y < TARGET_LINE_Y) {
-      current = updatePhysics(current);
+      current = updatePhysics(current, multiplier);
       path.push({ x: current.x, y: current.y });
     }
     return path;
@@ -81,7 +83,8 @@ const TrajectoryGame = ({ onBack }) => {
     if (gameState !== 'observing') return;
 
     // 统一调用核心物理函数
-    const nextState = updatePhysics(physicsRef.current);
+    const multiplier = isSlowMo ? 0.4 : 1;
+    const nextState = updatePhysics(physicsRef.current, multiplier);
     physicsRef.current = nextState;
 
     setBallPos({ x: nextState.x, y: nextState.y });
@@ -99,6 +102,16 @@ const TrajectoryGame = ({ onBack }) => {
   });
 
   const handleGuess = (e) => {
+    if (isSettingsOpen) {
+      setIsSettingsOpen(false);
+      return;
+    }
+
+    if (gameState === 'result') {
+      startRound();
+      return;
+    }
+
     if (gameState !== 'predicting') return;
 
     const rect = containerRef.current.getBoundingClientRect();
@@ -137,6 +150,10 @@ const TrajectoryGame = ({ onBack }) => {
                 <button onPointerDown={(e) => { e.stopPropagation(); setShowGhostBalls(!showGhostBalls); }} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-700/50">
                   <div className="flex items-center gap-3"><Eye size={16} /><span className="text-sm">保留位置参考</span></div>
                   <div className={`w-8 h-4 rounded-full relative ${showGhostBalls ? 'bg-tennis-ball' : 'bg-slate-600'}`}><div className={`absolute top-1 w-2 h-2 bg-white rounded-full transition-all ${showGhostBalls ? 'right-1' : 'left-1'}`} /></div>
+                </button>
+                <button onPointerDown={(e) => { e.stopPropagation(); setIsSlowMo(!isSlowMo); }} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-700/50">
+                  <div className="flex items-center gap-3"><FastForward size={16} /><span className="text-sm">慢放模式 (0.4x)</span></div>
+                  <div className={`w-8 h-4 rounded-full relative ${isSlowMo ? 'bg-tennis-ball' : 'bg-slate-600'}`}><div className={`absolute top-1 w-2 h-2 bg-white rounded-full transition-all ${isSlowMo ? 'right-1' : 'left-1'}`} /></div>
                 </button>
               </motion.div>
             )}
@@ -307,27 +324,20 @@ const TrajectoryGame = ({ onBack }) => {
 
         {/* 结算弹窗 */}
         {gameState === 'result' && (
-          <div className="absolute inset-x-0 top-24 flex justify-center z-50 px-6">
+          <div className="absolute inset-x-0 top-24 flex justify-center z-50 px-6 pointer-events-none">
             <motion.div 
               initial={{ y: -50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               className="bg-slate-800/90 backdrop-blur-xl p-5 rounded-[32px] border border-white/10 shadow-2xl text-center w-full max-w-[320px]"
             >
-              <div className="flex items-center justify-between gap-4">
-                <div className="text-left">
-                  <div className="text-4xl font-black text-white italic line-height-1">
-                    {score}
-                  </div>
-                  <p className={`text-[10px] font-bold uppercase tracking-widest ${score >= 90 ? 'text-yellow-400' : 'text-blue-400'}`}>
-                    {score >= 95 ? '神级预判！' : score >= 85 ? '专业水准' : score >= 70 ? '基本吻合' : '继续观察'}
-                  </p>
+              <div className="flex flex-col items-center gap-1">
+                <div className="text-5xl font-black text-white italic line-height-1">
+                  {score}
                 </div>
-                <button
-                  onPointerDown={(e) => { e.stopPropagation(); startRound(); }}
-                  className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-black text-sm italic transition-transform active:scale-95 shadow-lg shadow-blue-900/40"
-                >
-                  再来一球
-                </button>
+                <p className={`text-xs font-bold uppercase tracking-[0.2em] ${score >= 90 ? 'text-yellow-400' : 'text-blue-400'}`}>
+                  {score >= 95 ? '神级预判！' : score >= 85 ? '专业水准' : score >= 70 ? '基本吻合' : '继续观察'}
+                </p>
+                <p className="text-[10px] text-white/40 mt-3 font-bold uppercase tracking-widest animate-pulse">点击屏幕任意位置再来一球</p>
               </div>
             </motion.div>
           </div>
