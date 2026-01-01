@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft, RefreshCw, Settings, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Settings, Eye, EyeOff, Layout } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameLoop } from '../../hooks/useGameLoop';
 
@@ -16,6 +16,7 @@ const RhythmGame = ({ onBack }) => {
   const [hitEffect, setHitEffect] = useState(null); 
   const [hideZones, setHideZones] = useState(false);
   const [pauseOnHit, setPauseOnHit] = useState(false);
+  const [isFixedRatio, setIsFixedRatio] = useState(false); // 固定比例模式
   const [isPaused, setIsPaused] = useState(false);
   const [capturedBallId, setCapturedBallId] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -94,66 +95,74 @@ const RhythmGame = ({ onBack }) => {
     setBalls(updated); 
   });
 
-  const handleHit = (e) => {
-    // 性能关键：阻止浏览器默认事件处理
-    if (e) {
-      if (e.cancelable) e.preventDefault();
-      e.stopPropagation();
-    }
+      const handleHit = (e) => {
+        // 性能关键：阻止浏览器默认事件处理
+        if (e) {
+          if (e.cancelable) e.preventDefault();
+          e.stopPropagation();
+        }
 
-    if (isSettingsOpen) {
-      setIsSettingsOpen(false);
-      return;
-    }
-    
-    const hitTime = performance.now();
-    lastSpawnRef.current = hitTime;
+        if (isSettingsOpen) {
+          setIsSettingsOpen(false);
+          return;
+        }
+        
+        const hitTime = performance.now();
+        lastSpawnRef.current = hitTime;
 
-    if (isPaused) {
-      setIsPaused(false);
-      if (capturedBallId) {
-        ballsRef.current = ballsRef.current.filter(b => b.id !== capturedBallId);
-        setBalls(ballsRef.current);
-        setCapturedBallId(null);
-      }
-      return;
-    }
+        if (isPaused) {
+          setIsPaused(false);
+          if (capturedBallId) {
+            ballsRef.current = ballsRef.current.filter(b => b.id !== capturedBallId);
+            setBalls(ballsRef.current);
+            setCapturedBallId(null);
+          }
+          return;
+        }
 
-    if (gameState !== 'playing') return;
+        if (gameState !== 'playing') return;
 
-    const closestBall = ballsRef.current[0];
-    if (!closestBall) {
-      triggerFeedback('MISS');
-      return;
-    }
+        // 【物理对齐核心】找回丢失的物理像素判定，适配竞技场容器
+        const h = containerRef.current?.clientHeight || 0;
+        const hitZoneYPx = h * (HIT_ZONE_Y / 100);
+        const closestBall = ballsRef.current[0];
 
-    const dist = Math.abs(closestBall.y - HIT_ZONE_Y);
+        if (closestBall) {
+          const ballYPx = (closestBall.y / 100) * h;
+          const distPx = Math.abs(ballYPx - hitZoneYPx);
+          const maxThresholdPx = h * (HIT_THRESHOLD / 100);
 
-    if (dist <= HIT_THRESHOLD) {
-      let points = 0, type = '';
-      if (dist <= 2.5) { points = 100; type = 'PERFECT'; }
-      else if (dist <= 6) { points = 50; type = 'GREAT'; }
-      else { points = 20; type = 'GOOD'; }
+          if (distPx <= maxThresholdPx) {
+            const relativeDist = (distPx / h) * 100;
+            let points = 0, type = '';
+            
+            // 判定分级与视觉辅助圈完美对齐
+            if (relativeDist <= 2.5) { points = 100; type = 'PERFECT'; }
+            else if (relativeDist <= 6) { points = 50; type = 'GREAT'; }
+            else { points = 20; type = 'GOOD'; }
 
-      scoreRef.current += points;
-      setScore(scoreRef.current);
-      triggerFeedback(type);
+            scoreRef.current += points;
+            setScore(scoreRef.current);
+            triggerFeedback(type);
 
-      if (pauseOnHit) {
-        setIsPaused(true);
-        setCapturedBallId(closestBall.id);
-      } else {
-        ballsRef.current = [];
-        setBalls([]);
-      }
-    } else {
-      triggerFeedback('MISS');
-      if (pauseOnHit) {
-        setIsPaused(true);
-        setCapturedBallId(closestBall.id);
-      }
-    }
-  };
+            if (pauseOnHit) {
+              setIsPaused(true);
+              setCapturedBallId(closestBall.id);
+            } else {
+              ballsRef.current = [];
+              setBalls([]);
+            }
+          } else {
+            triggerFeedback('MISS');
+            if (pauseOnHit) {
+              setIsPaused(true);
+              setCapturedBallId(closestBall.id);
+            }
+          }
+        } else {
+          triggerFeedback('MISS');
+        }
+      };
 
   return (
     <div className="flex-1 flex flex-col h-[100dvh] overflow-hidden bg-slate-950 select-none touch-none">
@@ -180,6 +189,10 @@ const RhythmGame = ({ onBack }) => {
                   <div className="flex items-center gap-3"><RefreshCw size={16} /><span className="text-sm">击球后暂停</span></div>
                   <div className={`w-8 h-4 rounded-full relative ${pauseOnHit ? 'bg-tennis-ball' : 'bg-slate-600'}`}><div className={`absolute top-1 w-2 h-2 bg-white rounded-full transition-all ${pauseOnHit ? 'right-1' : 'left-1'}`} /></div>
                 </button>
+                <button onPointerDown={(e) => { e.stopPropagation(); setIsFixedRatio(!isFixedRatio); }} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-700/50">
+                  <div className="flex items-center gap-3"><Layout size={16} /><span className="text-sm">竞技场比例 (9:16)</span></div>
+                  <div className={`w-8 h-4 rounded-full relative ${isFixedRatio ? 'bg-tennis-ball' : 'bg-slate-600'}`}><div className={`absolute top-1 w-2 h-2 bg-white rounded-full transition-all ${isFixedRatio ? 'right-1' : 'left-1'}`} /></div>
+                </button>
               </motion.div>
             )}
           </AnimatePresence>
@@ -187,7 +200,17 @@ const RhythmGame = ({ onBack }) => {
         </div>
       </header>
 
-      <main ref={containerRef} className={`flex-1 relative overflow-hidden touch-none transition-colors duration-75 ${hitEffect?.type === 'PERFECT' ? 'bg-yellow-500/10' : hitEffect?.type === 'MISS' ? 'bg-red-500/10' : 'bg-slate-900'}`} onPointerDown={handleHit}>
+      <main 
+        ref={containerRef} 
+        className={`flex-1 relative overflow-hidden touch-none transition-colors duration-75 mx-auto ${
+          isFixedRatio ? 'aspect-[9/16] h-full w-auto border-x border-white/10 shadow-2xl' : 'w-full'
+        } ${
+          hitEffect?.type === 'PERFECT' ? 'bg-yellow-500/10' : 
+          hitEffect?.type === 'MISS' ? 'bg-red-500/10' : 
+          'bg-slate-900'
+        }`} 
+        onPointerDown={handleHit}
+      >
         <AnimatePresence>
           {hitEffect && (
             <motion.div 
