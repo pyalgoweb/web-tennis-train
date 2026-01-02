@@ -1,36 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ArrowLeft, RefreshCw, Target as TargetIcon, Zap, Settings, Eye, FastForward } from 'lucide-react';
+import { ArrowLeft, Target as TargetIcon, Zap, Settings, Eye, FastForward, Layout } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameLoop } from '../../hooks/useGameLoop';
 
 // 游戏配置
 const TARGET_LINE_Y = 85; // 目标判定线位置 (%)
-const HIDE_THRESHOLD_Y = 30; // 球消失的高度 (%)
+const HIDE_THRESHOLD_Y = 35; // 球消失的高度 (%)
 const TARGET_RATIO = 9 / 16;
-const PHYSICS = {
-  gravity: 0.15,
-  initialVyMin: 2,
-  initialVyMax: 4,
-  vxMax: 1.5
-};
-
-// 物理引擎核心逻辑
-const updatePhysics = (state, speedMultiplier = 1) => {
-  const next = { ...state };
-  next.vy += PHYSICS.gravity * speedMultiplier;
-  next.x += next.vx * speedMultiplier;
-  next.y += next.vy * speedMultiplier;
-
-  // 侧边墙壁反弹
-  if (next.x < 5) {
-    next.vx *= -1;
-    next.x = 5;
-  } else if (next.x > 95) {
-    next.vx *= -1;
-    next.x = 95;
-  }
-  return next;
-};
+const BALL_SPEED_BASE = 0.6; // 俯视图下的恒定球速
 
 const TrajectoryGame = ({ onBack }) => {
   const [gameState, setGameState] = useState('ready'); 
@@ -41,15 +18,24 @@ const TrajectoryGame = ({ onBack }) => {
   const [trajectoryPath, setTrajectoryPath] = useState([]); 
   const [showGhostBalls, setShowGhostBalls] = useState(true); 
   const [isSlowMo, setIsSlowMo] = useState(false); 
-  const [isFixedRatio, setIsFixedRatio] = useState(true); // 默认开启
+  const [isFixedRatio, setIsFixedRatio] = useState(true); 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [arenaSize, setArenaSize] = useState({ width: 0, height: 0, unit: 1 });
 
   const outerContainerRef = useRef(null);
   const arenaRef = useRef(null);
-  const physicsRef = useRef({ x: 50, y: -10, vx: 0, vy: 0 });
+  
+  // 存储直线的物理属性
+  const linePhysicsRef = useRef({
+    startX: 0,
+    startY: -10,
+    targetX: 0,
+    targetY: TARGET_LINE_Y,
+    vx: 0,
+    vy: 0
+  });
 
-  // 动态计算竞技场尺寸 (同步 RhythmGame 逻辑)
+  // 动态计算竞技场尺寸
   useEffect(() => {
     const calculateSize = () => {
       const container = outerContainerRef.current;
@@ -79,56 +65,56 @@ const TrajectoryGame = ({ onBack }) => {
     };
   }, [isFixedRatio]);
 
-  const calculateRemainingPath = (startState) => {
-    let current = { ...startState };
-    let prev = { ...startState };
-    const path = [];
-    const multiplier = isSlowMo ? 0.4 : 1;
-    
-    while (current.y < TARGET_LINE_Y) {
-      prev = { ...current };
-      current = updatePhysics(current, multiplier);
-      path.push({ x: current.x, y: current.y });
-    }
-
-    // 【核心修复】计算球与判定线的精确交点 (线性插值)
-    if (path.length > 0 && current.y !== prev.y) {
-      const ratio = (TARGET_LINE_Y - prev.y) / (current.y - prev.y);
-      const exactX = prev.x + (current.x - prev.x) * ratio;
-      // 修正路径的最后一个点，使其中心正好落在判定线上
-      path[path.length - 1] = { x: exactX, y: TARGET_LINE_Y };
-    }
-    
-    return path;
-  };
-
   const startRound = () => {
-    const startX = 10 + Math.random() * 80;
-    const vx = (Math.random() - 0.5) * PHYSICS.vxMax * 2;
-    const vy = PHYSICS.initialVyMin + Math.random() * (PHYSICS.initialVyMax - PHYSICS.initialVyMin);
-    physicsRef.current = { x: startX, y: -10, vx, vy };
-    setBallPos({ x: startX, y: -10 });
+    // 1. 随机起点 (顶部)
+    const startX = 20 + Math.random() * 60;
+    const startY = -10;
+
+    // 2. 随机目标点 (判定线上)
+    const targetX = 10 + Math.random() * 80;
+    const targetY = TARGET_LINE_Y;
+
+    // 3. 计算速度分量 (俯视图恒速直线运动)
+    const dx = targetX - startX;
+    const dy = targetY - startY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    const speed = BALL_SPEED_BASE * (isSlowMo ? 0.4 : 1);
+    const vx = (dx / distance) * speed;
+    const vy = (dy / distance) * speed;
+
+    linePhysicsRef.current = { startX, startY, targetX, targetY, vx, vy };
+
+    // 初始化状态
+    setBallPos({ x: startX, y: startY });
     setUserGuessX(null);
     setScore(null);
-    setTargetPos({ x: null, y: null });
-    setTrajectoryPath([{ x: startX, y: -10 }]);
+    setTargetPos({ x: targetX, y: targetY });
+    setTrajectoryPath([{ x: startX, y: startY }]);
     setGameState('observing');
   };
 
-  useGameLoop(() => {
+  useGameLoop((deltaTime) => {
     if (gameState !== 'observing') return;
-    const multiplier = isSlowMo ? 0.4 : 1;
-    const nextState = updatePhysics(physicsRef.current, multiplier);
-    physicsRef.current = nextState;
-    setBallPos({ x: nextState.x, y: nextState.y });
-    setTrajectoryPath(prev => [...prev, { x: nextState.x, y: nextState.y }]);
-    if (nextState.y >= HIDE_THRESHOLD_Y) {
-      const remainingPath = calculateRemainingPath(nextState);
-      const lastPoint = remainingPath[remainingPath.length - 1] || nextState;
-      setTargetPos({ x: lastPoint.x, y: lastPoint.y });
-      setTrajectoryPath(prev => [...prev, ...remainingPath]);
-      setGameState('predicting');
-    }
+
+    const { vx, vy } = linePhysicsRef.current;
+    // 根据 deltaTime 更新位置，确保不同帧率下速度一致
+    const step = deltaTime / 6; 
+    
+    setBallPos(prev => {
+      const nextX = prev.x + vx * step;
+      const nextY = prev.y + vy * step;
+      
+      const newPos = { x: nextX, y: nextY };
+      setTrajectoryPath(path => [...path, newPos]);
+
+      // 达到消失阈值，切入预测模式
+      if (nextY >= HIDE_THRESHOLD_Y) {
+        setGameState('predicting');
+      }
+
+      return newPos;
+    });
   });
 
   const handleGuess = (e) => {
@@ -142,13 +128,19 @@ const TrajectoryGame = ({ onBack }) => {
     }
     if (gameState !== 'predicting') return;
 
-    // 判定逻辑适配竞技场容器
     const rect = arenaRef.current.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     setUserGuessX(x);
+    
+    // 计算得分：基于 X 轴偏差
     const dist = Math.abs(x - targetPos.x);
     setScore(Math.max(0, Math.round(100 - dist * 5)));
     setGameState('result');
+
+    // 结果时补全剩余路径
+    const { targetX, targetY } = linePhysicsRef.current;
+    setTrajectoryPath(prev => [...prev, { x: targetX, y: targetY }]);
+
     if (window.navigator.vibrate) window.navigator.vibrate(20);
   };
 
@@ -159,7 +151,7 @@ const TrajectoryGame = ({ onBack }) => {
       <header className="p-4 flex items-center justify-between border-b border-slate-800 bg-blue-900/20 z-[60] shrink-0">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="p-2 -ml-2 text-slate-400"><ArrowLeft /></button>
-          <h2 className="text-xl font-bold italic text-white">弹道预测</h2>
+          <h2 className="text-xl font-bold italic text-white">俯视轨迹预测</h2>
         </div>
         <div className="flex items-center gap-4 relative">
           <button onPointerDown={(e) => { e.stopPropagation(); setIsSettingsOpen(!isSettingsOpen); }}
@@ -190,7 +182,7 @@ const TrajectoryGame = ({ onBack }) => {
 
       <div ref={outerContainerRef} className="flex-1 flex items-start justify-center bg-black overflow-hidden">
         <div ref={arenaRef} onPointerDown={handleGuess}
-          className={`relative overflow-hidden transition-colors duration-75 shrink-0 ${isFixedRatio ? 'border-x border-white/20' : ''} bg-slate-900`}
+          className={`relative overflow-hidden transition-colors duration-75 shrink-0 ${isFixedRatio ? 'border-x border-white/10' : ''} bg-slate-900`}
           style={{ width: arenaSize.width || '100%', height: arenaSize.height || '100%' }}>
           
           <div className="absolute inset-0 opacity-10 pointer-events-none">
@@ -199,7 +191,7 @@ const TrajectoryGame = ({ onBack }) => {
           </div>
 
           <div className="absolute left-0 right-0 h-1 bg-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.3)] z-10" style={{ top: `${TARGET_LINE_Y}%` }}>
-            <div className="absolute -top-6 left-4 text-[10px] font-black text-blue-400/60 uppercase tracking-widest">预测目标线</div>
+            <div className="absolute -top-6 left-4 text-[10px] font-black text-blue-400/60 uppercase tracking-widest">目标判定线</div>
           </div>
 
           <AnimatePresence>
@@ -213,26 +205,27 @@ const TrajectoryGame = ({ onBack }) => {
             )}
           </AnimatePresence>
 
-          {showGhostBalls && (gameState === 'predicting' || gameState === 'result') && trajectoryPath.length > 0 && (
+          {showGhostBalls && (gameState === 'predicting' || gameState === 'result') && (
             <>
+              {/* 起点参考：计算进入屏幕瞬间 (y=0) 的位置 */}
               {(() => {
-                const startPoint = trajectoryPath.find(p => p.y >= 0);
-                return startPoint && (
+                const { startX, startY, targetX, targetY } = linePhysicsRef.current;
+                // 线性插值计算 y=0 时的 x
+                const ratio = (0 - startY) / (targetY - startY);
+                const entryX = startX + (targetX - startX) * ratio;
+                return (
                   <div className="absolute border-2 border-dashed border-white/20 rounded-full z-10"
-                    style={{ left: `${startPoint.x}%`, top: `${startPoint.y}%`, width: u * 6, height: u * 6, transform: 'translate(-50%, -50%)' }}>
+                    style={{ left: `${entryX}%`, top: `0%`, width: u * 6, height: u * 6, transform: 'translate(-50%, -50%)' }}>
                     <div className="absolute inset-0 flex items-center justify-center text-[8px] font-black text-white/20 uppercase">Start</div>
                   </div>
                 );
               })()}
-              {(() => {
-                const hidePoint = trajectoryPath.find(p => p.y >= HIDE_THRESHOLD_Y);
-                return hidePoint && (
-                  <div className="absolute border-2 border-dashed border-white/20 rounded-full z-10"
-                    style={{ left: `${hidePoint.x}%`, top: `${hidePoint.y}%`, width: u * 6, height: u * 6, transform: 'translate(-50%, -50%)' }}>
-                    <div className="absolute inset-0 flex items-center justify-center text-[8px] font-black text-white/20 uppercase">Hide</div>
-                  </div>
-                );
-              })()}
+              
+              {/* 消失点参考 */}
+              <div className="absolute border-2 border-dashed border-white/20 rounded-full z-10"
+                style={{ left: `${ballPos.x}%`, top: `${ballPos.y}%`, width: u * 6, height: u * 6, transform: 'translate(-50%, -50%)' }}>
+                <div className="absolute inset-0 flex items-center justify-center text-[8px] font-black text-white/20 uppercase">Hide</div>
+              </div>
             </>
           )}
 
@@ -240,8 +233,8 @@ const TrajectoryGame = ({ onBack }) => {
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-blue-600/90 backdrop-blur-md px-8 py-4 rounded-3xl border border-blue-400/30 shadow-2xl text-center">
                 <Zap className="mx-auto mb-2 text-tennis-ball animate-pulse" />
-                <p className="text-white font-black italic text-xl">球去哪了？</p>
-                <p className="text-blue-100/70 text-sm mt-1">点击蓝色横线上你预判的落点</p>
+                <p className="text-white font-black italic text-xl">俯视预判</p>
+                <p className="text-blue-100/70 text-sm mt-1">点击横线上你认为球会触碰的点</p>
               </motion.div>
             </div>
           )}
@@ -249,12 +242,12 @@ const TrajectoryGame = ({ onBack }) => {
           {gameState === 'result' && (
             <>
               <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full pointer-events-none z-10">
-                <motion.path initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }} transition={{ duration: 0.8 }}
-                  d={`M ${trajectoryPath.map(p => `${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' L ')}`}
-                  fill="none" stroke="url(#pathGradient)" strokeWidth="0.5" strokeLinecap="round" strokeLinejoin="round" />
+                <motion.path initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }} transition={{ duration: 0.5 }}
+                  d={`M ${linePhysicsRef.current.startX} ${linePhysicsRef.current.startY} L ${targetPos.x} ${targetPos.y}`}
+                  fill="none" stroke="url(#pathGradient)" strokeWidth="0.5" strokeLinecap="round" />
                 <defs>
                   <linearGradient id="pathGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="rgba(223, 255, 0, 0.1)" /><stop offset="30%" stopColor="rgba(223, 255, 0, 0.4)" /><stop offset="100%" stopColor="rgba(223, 255, 0, 1)" />
+                    <stop offset="0%" stopColor="rgba(223, 255, 0, 0.2)" /><stop offset="100%" stopColor="rgba(223, 255, 0, 1)" />
                   </linearGradient>
                 </defs>
               </svg>
@@ -267,11 +260,8 @@ const TrajectoryGame = ({ onBack }) => {
                 className="absolute bg-tennis-ball rounded-full shadow-[0_0_40px_rgba(223,255,0,0.8)] z-20 flex items-center justify-center"
                 style={{ left: `${targetPos.x}%`, top: `${targetPos.y}%`, width: u * 6, height: u * 6 }}>
                 <TargetIcon size={u * 3} className="text-black/40" />
-                <div className="absolute -bottom-8 whitespace-nowrap text-[8px] font-bold text-tennis-ball uppercase">实际落点</div>
+                <div className="absolute -bottom-8 whitespace-nowrap text-[8px] font-bold text-tennis-ball uppercase">真实落点</div>
               </motion.div>
-              <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
-                <line x1={`${userGuessX}%`} y1={`${TARGET_LINE_Y}%`} x2={`${targetPos.x}%`} y2={`${targetPos.y}%`} stroke="white" strokeWidth="2" strokeDasharray="4 4" className="opacity-30" />
-              </svg>
             </>
           )}
 
@@ -292,11 +282,11 @@ const TrajectoryGame = ({ onBack }) => {
           {gameState === 'ready' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm z-[100] p-8">
               <div className="bg-blue-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl shadow-blue-500/20" style={{ width: u * 12, height: u * 12 }}>
-                <TargetIcon size={u * 6} className="text-white" />
+                <Zap size={u * 6} className="text-white" />
               </div>
-              <h3 className="font-black text-white mb-4 italic text-center" style={{ fontSize: u * 4 }}>轨迹预测训练</h3>
+              <h3 className="font-black text-white mb-4 italic text-center" style={{ fontSize: u * 4 }}>俯视轨迹训练</h3>
               <p className="text-slate-400 mb-12 text-center leading-relaxed" style={{ fontSize: u * 2, maxWidth: u * 35 }}>
-                观察网球运动的一小段轨迹，预判它最终触碰 <span className="text-blue-400 font-bold">蓝色目标线</span> 的位置。
+                模拟真实比赛中的俯视角，观察来球的角度，预判它在 <span className="text-blue-400 font-bold">目标线</span> 上的落点。
               </p>
               <button onPointerDown={(e) => { e.stopPropagation(); startRound(); }}
                 className="bg-blue-600 text-white rounded-2xl font-black italic tracking-widest shadow-2xl shadow-blue-500/30 transition-transform active:scale-95"
@@ -309,7 +299,7 @@ const TrajectoryGame = ({ onBack }) => {
       </div>
 
       <footer className="p-6 bg-slate-900 border-t border-slate-800 text-center shrink-0">
-        <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.4em]">观察轨迹 • 预判落点</p>
+        <p className="text-slate-500 font-bold text-[10px] uppercase tracking-[0.4em]">俯视视角 • 角度预判</p>
       </footer>
     </div>
   );
