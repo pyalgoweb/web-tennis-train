@@ -73,10 +73,9 @@ const RhythmGame = ({ onBack }) => {
     window.addEventListener('orientationchange', calculateArenaSize);
     window.addEventListener('load', calculateArenaSize);
     
-    // 初始计算
     calculateArenaSize();
     setTimeout(calculateArenaSize, 50);
-    setTimeout(calculateArenaSize, 500); // 增加一个更晚的兜底计算
+    setTimeout(calculateArenaSize, 500); 
     
     return () => {
       ro.disconnect();
@@ -179,7 +178,6 @@ const RhythmGame = ({ onBack }) => {
 
     if (gameState !== 'playing') return;
 
-    // 【物理对齐核心】使用竞技场的实际高度进行判定
     const h = arenaSize.height;
     const hitZoneYPx = h * (HIT_ZONE_Y / 100);
     const closestBall = ballsRef.current[0];
@@ -220,17 +218,15 @@ const RhythmGame = ({ onBack }) => {
     }
   };
 
-  // 根据基准单位计算的尺寸（单位：像素）
   const u = arenaSize.unit;
-  const ballSize = u * 8; // 球的直径 = 8% 的竞技场高度
-  const fontSize = u * 6; // 反馈文字 = 6%
-  const titleFontSize = u * 8; // 标题文字 = 8%
+  const ballSize = u * 8; 
+  const fontSize = u * 6; 
+  const titleFontSize = u * 8; 
   const btnPaddingY = u * 2.5;
   const btnFontSize = u * 4;
 
   return (
     <div className="flex-1 flex flex-col h-[100dvh] overflow-hidden bg-black select-none touch-none">
-      {/* Header - 固定高度 */}
       <header className="p-4 flex items-center justify-between border-b border-slate-800 bg-emerald-900/20 z-[60] shrink-0">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="p-2 -ml-2 text-slate-400"><ArrowLeft /></button>
@@ -265,12 +261,10 @@ const RhythmGame = ({ onBack }) => {
         </div>
       </header>
 
-      {/* 外层容器：用于计算可用空间，背景为黑色 */}
       <div 
         ref={outerContainerRef}
         className="flex-1 flex items-start justify-center overflow-hidden bg-black"
       >
-        {/* 竞技场：固定尺寸，居中显示 */}
         <div
           ref={arenaRef}
           className={`relative overflow-hidden touch-none transition-colors duration-75 shrink-0 ${
@@ -286,7 +280,6 @@ const RhythmGame = ({ onBack }) => {
           }}
           onPointerDown={handleHit}
         >
-          {/* 打击特效背景 */}
           <AnimatePresence>
             {hitEffect && (
               <motion.div 
@@ -304,7 +297,6 @@ const RhythmGame = ({ onBack }) => {
             )}
           </AnimatePresence>
 
-          {/* 判定线和判定区域 */}
           <div className="absolute inset-0 pointer-events-none z-10">
             <div className="absolute left-0 right-0 h-[2px] bg-white/40 -translate-y-1/2" style={{ top: `${HIT_ZONE_Y}%` }} />
             {!hideZones ? (
@@ -333,11 +325,10 @@ const RhythmGame = ({ onBack }) => {
             </AnimatePresence>
           </div>
 
-          {/* 网球 - 使用动态尺寸 */}
           {balls.map(ball => (
             <div 
               key={ball.id} 
-              className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-20" 
+              className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 overflow-hidden" 
               style={{ 
                 top: `${ball.y}%`, 
                 width: ballSize, 
@@ -349,8 +340,20 @@ const RhythmGame = ({ onBack }) => {
               }}
             >
               <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full">
-                <path d="M 5,50 C 5,10 50,10 50,50 C 50,90 95,90 95,50" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="10" strokeLinecap="round" transform="rotate(-15 50 50)" />
-                <path d="M 5,50 C 5,10 50,10 50,50 C 50,90 95,90 95,50" fill="none" stroke="#f5f5f5" strokeWidth="7" strokeLinecap="round" className="opacity-80" transform="rotate(-15 50 50)" />
+                <path 
+                  d="M 98,45 Q 53,45 53,2 M 2,55 Q 47,55 47,98" 
+                  fill="none" 
+                  stroke="rgba(0,0,0,0.2)" 
+                  strokeWidth="12" 
+                  strokeLinecap="round" 
+                />
+                <path 
+                  d="M 98,45 Q 53,45 53,2 M 2,55 Q 47,55 47,98" 
+                  fill="none" 
+                  stroke="#f5f5f5" 
+                  strokeWidth="9" 
+                  strokeLinecap="round" 
+                />
               </svg>
               <div className="absolute inset-0 rounded-full bg-[url('https://www.transparenttextures.com/patterns/felt.png')] opacity-20" />
               {!hideZones && (
@@ -362,7 +365,6 @@ const RhythmGame = ({ onBack }) => {
             </div>
           ))}
 
-          {/* 反馈文字 - 使用动态尺寸 */}
           <AnimatePresence>
             {feedback && (
               <motion.div 
@@ -378,7 +380,6 @@ const RhythmGame = ({ onBack }) => {
             )}
           </AnimatePresence>
 
-          {/* 开始界面 / 暂停界面 - 使用动态尺寸 */}
           {(gameState === 'ready' || isPaused) && (
             <div className={`absolute inset-0 flex flex-col items-center z-50 transition-all ${isPaused ? 'bg-black/5' : 'bg-black/80 backdrop-blur-sm justify-center'}`}>
               {isPaused ? (
@@ -417,7 +418,6 @@ const RhythmGame = ({ onBack }) => {
         </div>
       </div>
 
-      {/* Footer - 固定高度 */}
       <footer className="p-6 bg-slate-900 border-t border-slate-800 text-center z-50 shrink-0">
         <p className="text-slate-500 font-bold text-xs uppercase tracking-[0.4em] animate-pulse">点击屏幕击球</p>
       </footer>

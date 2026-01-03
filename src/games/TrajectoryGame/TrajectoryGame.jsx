@@ -197,10 +197,32 @@ const TrajectoryGame = ({ onBack }) => {
           <AnimatePresence>
             {gameState === 'observing' && (
               <motion.div initial={{ scale: 0, x: "-50%", y: "-50%" }} animate={{ scale: 1, x: "-50%", y: "-50%" }} exit={{ scale: 0, opacity: 0, x: "-50%", y: "-50%" }}
-                className="absolute bg-tennis-ball rounded-full shadow-[0_0_30px_rgba(223,255,0,0.5)] z-20"
-                style={{ left: `${ballPos.x}%`, top: `${ballPos.y}%`, width: u * 6, height: u * 6 }}
+                className="absolute bg-tennis-ball rounded-full shadow-[0_0_30px_rgba(223,255,0,0.5)] z-20 overflow-hidden"
+                style={{ 
+                  left: `${ballPos.x}%`, 
+                  top: `${ballPos.y}%`, 
+                  width: u * 6, 
+                  height: u * 6,
+                  background: `radial-gradient(circle at 35% 35%, #dfff00 0%, #c2e600 50%, #a2c100 100%)`
+                }}
               >
-                <div className="absolute inset-0 rounded-full border-2 border-black/10 rotate-45" />
+                <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full">
+                  <path 
+                    d="M 98,45 Q 53,45 53,2 M 2,55 Q 47,55 47,98" 
+                    fill="none" 
+                    stroke="rgba(0,0,0,0.2)" 
+                    strokeWidth="12" 
+                    strokeLinecap="round" 
+                  />
+                  <path 
+                    d="M 98,45 Q 53,45 53,2 M 2,55 Q 47,55 47,98" 
+                    fill="none" 
+                    stroke="#f5f5f5" 
+                    strokeWidth="9" 
+                    strokeLinecap="round" 
+                  />
+                </svg>
+                <div className="absolute inset-0 rounded-full bg-[url('https://www.transparenttextures.com/patterns/felt.png')] opacity-10" />
               </motion.div>
             )}
           </AnimatePresence>
